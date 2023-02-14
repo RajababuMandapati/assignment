@@ -41,14 +41,15 @@ const hasStatusProperty = (requestQuery) => {
   return requestQuery.status !== undefined;
 };
 
-const hasSearc_qProperty = (requestQuery) => {
-  return requestQuery.search_q !== undefined;
+const hasCategoryAndPriorityProperty = (requestQuery) => {
+  return (
+    requestQuery.category !== undefined && requestQuery.priority !== undefined
+  );
 };
 
 const hasCategoryAndStatusProperty = (requestQuery) => {
   return (
-    requestAnimationFrame.category !== undefined &&
-    requestQuery.status !== undefined
+    requestQuery.category !== undefined && requestQuery.status !== undefined
   );
 };
 
@@ -86,7 +87,7 @@ app.get("/todos/", async (request, response) => {
         AND status = '${status}'
         AND priority = '${priority}';`;
       break;
-    case hasCategoryAndProrityProperty(request.query):
+    case hasCategoryAndPriorityProperty(request.query):
       getTodosQuery = `
               SELECT * FROM todo WHERE todo = '%${search_q}%'
               AND category = '${category}' AND priority = '${priority}';`;
