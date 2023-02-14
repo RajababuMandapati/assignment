@@ -66,13 +66,13 @@ app.get("/todos/", async (request, response) => {
       getTodosQuery = `
               SELECT *
               FROM todo
-              WHERE search_q LIKE '%${search_q}%'
+              WHERE todo LIKE '%${search_q}%'
               AND 
               status='${status}';`;
       break;
     case hasPriorityProperty(request.query):
       getTodosQuery = `
-              SELECT * FROM todo WHERE search_q LIKE '%${search_q}%'
+              SELECT * FROM todo WHERE todo LIKE '%${search_q}%'
               AND priority = '${priority}';`;
       break;
     case hasPriorityAndStatusProperties(request.query):
@@ -88,7 +88,7 @@ app.get("/todos/", async (request, response) => {
       break;
     case hasCategoryAndProrityProperty(request.query):
       getTodosQuery = `
-              SELECT * FROM todo WHERE search_q = '%${search_q}%'
+              SELECT * FROM todo WHERE todo = '%${search_q}%'
               AND category = '${category}' AND priority = '${priority}';`;
       break;
     case hasCategoryAndStatusProperty(request.query):
@@ -99,7 +99,7 @@ app.get("/todos/", async (request, response) => {
       getTodosQuery = `SELECT * FROM todo WHERE category = '${category}';`;
       break;
     default:
-      getTodosQuery = `SELECT * FROM todo WHERE search_q LIKE '%${search_q}%';
+      getTodosQuery = `SELECT * FROM todo WHERE todo LIKE '%${search_q}%';
               `;
       break;
   }
@@ -121,13 +121,91 @@ app.get("/todos/:todoId/", async (request, response) => {
 });
 
 app.get("/agenda/", async (request, response) => {
-  const { search_q = "", date } = request.query;
-
+  const date = format(new Date(2021, 03, 16), "yyyy-MM-dd");
   const getTodoDate = `
-    SELECT * FROM todo WHERE search_q LIKE '%${search_q}%' AND 
-    dueDate = ${date};`;
-  const todo = await database.all(getTodoDate);
+    SELECT * FROM todo WHERE todo LIKE '%${search_q}%' AND 
+    due_date = ${date};`;
+  const todo = await database.get(getTodoDate);
   response.send(todo);
+});
+
+app.post("/todos/", async (request, response) => {
+  const { id, todo, priority, status, category, dueDate } = request.body;
+
+  const insertTodo = `INSERT INTO
+         todo (id, todo, priority, status, category, due_date)
+        VALUES 
+            (${id}, '${todo}', '${priority}', '${status}', '${category}',
+             '${dueDate}');`;
+  await database.run(insertTodo);
+  response.send("Todo Successfully Added");
+});
+
+app.put("/todos/:todoId/", async (request, response) => {
+  const { todoId } = request.params;
+
+  const updatedColumn = "";
+
+  const requestBody = request.body;
+
+  switch (true) {
+    case requestBody.status !== undefined:
+      updatedColumn = "Status";
+      break;
+    case requestBody.priority !== undefined:
+      updatedColumn = "Priority";
+      break;
+    case requestBody.todo !== undefined:
+      updatedColumn = "Todo";
+      break;
+    case requestBody.category !== undefined:
+      updatedColumn = "Category";
+      break;
+    case requestBody.due_date !== undefined:
+      updatedColumn = "Due Date";
+      break;
+  }
+
+  const previousTodoQuery = `
+    SELECT * FROM todo
+    WHERE id = ${todoId};`;
+  const previousTodo = await database.get(previousTodoQuery);
+
+  const {
+    status = previousTodo.status,
+    priority = previousTodo.priority,
+    todo = previousTodo.todo,
+    category = previousTodo.category,
+    due_date = previousTodo.due_date,
+  } = request.body;
+
+  const updateTodoQuery = `
+    UPDATE
+      todo
+    SET
+      todo='${todo}',
+      priority='${priority}',
+      status='${status}',
+      category = '${category}',
+      due_date = '${due_date}',
+    WHERE
+      id = ${todoId};`;
+
+  await database.run(updateTodoQuery);
+  response.send(`${updatedColumn} Updated`);
+});
+
+app.delete("/todos/:todoId", async (request, response) => {
+  const { todoId } = request.params;
+
+  const deleteTodoQuery = `
+     DELETE FROM
+        todo
+    WHERE
+        id = ${todoId};`;
+
+  await database.run(deleteTodoQuery);
+  response.send("Todo Deleted");
 });
 
 module.exports = app;
